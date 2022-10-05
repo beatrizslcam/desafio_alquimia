@@ -17,15 +17,14 @@ defmodule Desafio do
         ) :: [%{String.t() => non_neg_integer()}]
 
   def split(lista_de_compras, emails) do
-    {lista_emails_real, quantidade_emails} = lista_emails(emails)
+    lista_emails_real= lista_emails(emails)
     valor_total_lista(lista_de_compras,0)
-    |>repartir_valor(quantidade_emails,lista_emails_real)
-
+    |>repartir_valor(lista_emails_real)
   end
 
   defp lista_emails(emails) do
-    lista_emails_real  = Enum.frequencies(emails)|> Map.keys()
-    {lista_emails_real,length(lista_emails_real)}
+    Enum.frequencies(emails)
+    |> Map.keys()
   end
 
   defp valor_total_lista([], valor_compra), do: valor_compra
@@ -36,43 +35,61 @@ defmodule Desafio do
     valor_total_lista(itens_restantes, valor_compra)
   end
 
-  def repartir_valor(valor_total,quantidade_emails,emails) do
-    divisao = div(valor_total,quantidade_emails)
-    resto = rem(valor_total,quantidade_emails)
-    acc = 0
-    resultado = %{}
-    case  [divisao,resto] do
-      [0, resto]->
-        if (acc != 0) do
-          inserir_no_map(emails,1,resto)
+  def repartir_valor(valor_total,emails) do
+    divisao = div(valor_total,length(emails))
+    resto = rem(valor_total,length(emails))
+    emails
+    |>Enum.with_index()
+    |>Enum.map(fn {email, index} ->
+       if index < resto do
+          {email,divisao + 1}
+       else
+          {email,divisao}
+       end
+    end)
+    |>Map.new()
+  end
 
-          else
-            inserir_no_map(emails,0,_resto)
-        end
-    #  [divisao,0]->
-     #     inserir_no_map(emails,divisao)
-      [_divisao,_resto]->
-        :ok
-      end
-    end
-
-    def inserir_no_map(emails,valor,_resto, _quantidade_emails) do
-      acc = 0
-      Enum.map(emails,
-      fn x ->
-        if(acc < quantidade_emails ), do: Map.put_new(%{},x,valor)
-        else
-
-      end)
-    end
 end
-#emails = ~w(
-#  paulo@email.com
-#  valente@email.com
-#  teste@email.com
-#  valente@email.com
-#  paulo@email.com
-#  valente@email.com
-#)
 
-#Desafio.split([1,2,3], emails)
+
+import ExUnit.Assertions
+
+# Lista de emails com valores repetidos
+emails = ~w(
+  paulo@email.com
+  valente@email.com
+  teste@email.com
+  valente@email.com
+  paulo@email.com
+  valente@email.com
+)
+
+# Primeiro, vamos validar os casos em que o valor total é menor ou igual ao número de emails
+assert %{"paulo@email.com" => 1, "valente@email.com" => 0, "teste@email.com" => 0} ==
+         Desafio.split([{"banana", 1, 1}, {"maçã", 0, 10}], emails)
+
+assert %{"paulo@email.com" => 1, "valente@email.com" => 1, "teste@email.com" => 0} ==
+         Desafio.split([{"banana", 2, 1}, {"maçã", 0, 10}], emails)
+assert %{"paulo@email.com" => 1, "valente@email.com" => 1, "teste@email.com" => 1} ==
+         Desafio.split([{"banana", 1, 1}, {"maçã", 1, 2}], emails)
+
+# Caso em que há mais de um centavo de resto
+assert %{"paulo@email.com" => 2, "valente@email.com" => 2, "teste@email.com" => 1} ==
+         Desafio.split([{"banana", 1, 1}, {"maçã", 1, 2}, {"uva", 2, 1}], emails)
+
+# Teste de erro de arredondamento
+
+assert %{
+         "1@email.com" => 1,
+         "2@email.com" => 1,
+         "3@email.com" => 1,
+         "4@email.com" => 1,
+         "5@email.com" => 1,
+         "6@email.com" => 1,
+         "7@email.com" => 1,
+         "8@email.com" => 0,
+         "9@email.com" => 0,
+         "10@email.com" => 0,
+         "11@email.com" => 0
+       } == Desafio.split([{"banana", 7, 1}], Enum.map(1..11, &"#{&1}@email.com"))
